@@ -11,6 +11,7 @@
 package me.fzzyhmstrs.fzzy_config.screen.widget.custom
 
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.font.DrawnTextConsumer
 import net.minecraft.client.font.TextRenderer
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.text.OrderedText
@@ -41,15 +42,9 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
 
     private var alignRight = false
 
-    override fun renderText(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun renderText(context: DrawContext, textConsumer: DrawnTextConsumer, mouseX: Int, mouseY: Int, delta: Float) {
         val text = cache.map(getKey(width - leftPadding - rightPadding))
-        text.drawWithShadow(context, alignRight, width - leftPadding - rightPadding, x + leftPadding,  y + topPadding, lineHeight, textColor)
-        if (!isMouseOver(mouseX.toDouble(), mouseY.toDouble())) return
-        val d = mouseX - this.x - leftPadding
-        val dd = mouseY - this.y - topPadding
-        val line = dd / lineHeight
-        val style = text.getStyleAt(MinecraftClient.getInstance(), line, d.toDouble()) ?: return
-        context.drawHoverEvent(textRenderer, style, mouseX, mouseY)
+        text.drawWithShadow(context, textConsumer, alignRight, width - leftPadding - rightPadding, x + leftPadding,  y + topPadding, lineHeight)
     }
 
     override fun getHeight(): Int {
@@ -75,30 +70,15 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
         return Key(message, width)
     }
 
-    override fun onPress(event: CustomWidget.MouseEvent): Boolean {
-        val client = MinecraftClient.getInstance()
-        val screen = client.currentScreen ?: return false
-        val text = cache.map(getKey(width - leftPadding - rightPadding))
-        val d = event.x() - this.x - leftPadding
-        val dd = event.y() - this.y - topPadding
-        val line = (dd / lineHeight).toInt()
-        val style = text.getStyleAt(client, line, d) ?: return false
-        val bl = screen.handleTextClick(style)
-        if (bl) playDownSound(client.soundManager)
-        return bl
-    }
-
     private data class Key(val message: Text, val width: Int)
 
     interface MultilineText {
 
-        fun drawWithShadow(context: DrawContext, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int, color: Int)
+        fun drawWithShadow(context: DrawContext, textConsumer: DrawnTextConsumer, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int)
 
-        fun draw(context: DrawContext, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int, color: Int): Int
+        fun draw(context: DrawContext, textConsumer: DrawnTextConsumer, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int): Int
 
         fun count(): Int
-
-        fun getStyleAt(client: MinecraftClient, line: Int, width: Double): Style?
 
         val maxWidth: Int
 
@@ -154,7 +134,7 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
                     }
 
 
-                    override fun drawWithShadow(context: DrawContext, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int, color: Int) {
+                    override fun drawWithShadow(context: DrawContext, textConsumer: DrawnTextConsumer, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int) {
                         var i: Int = y
 
                         val var7: Iterator<Line> = getLines().iterator()
@@ -162,15 +142,15 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
                             val line: Line = var7.next()
                             if (alignRight) {
                                 val xx = x + width - renderer.getWidth(line.text)
-                                context.drawTextWithShadow(renderer, line.text, xx, i, color)
+                                textConsumer.text(xx, i, line.text)
                             } else {
-                                context.drawTextWithShadow(renderer, line.text, x, i, color)
+                                textConsumer.text(x, i, line.text)
                             }
                             i += lineHeight
                         }
                     }
 
-                    override fun draw(context: DrawContext, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int, color: Int): Int {
+                    override fun draw(context: DrawContext, textConsumer: DrawnTextConsumer, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int): Int {
                         var i: Int = y
 
                         val var7: Iterator<Line> = getLines().iterator()
@@ -178,9 +158,9 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
                             val line: Line = var7.next()
                             if (alignRight) {
                                 val xx = x + width - renderer.getWidth(line.text)
-                                context.drawText(renderer, line.text, xx, i, color, false)
+                                textConsumer.text(xx, i, line.text)
                             } else {
-                                context.drawText(renderer, line.text, x, i, color, false)
+                                textConsumer.text(x, i, line.text)
                             }
                             i += lineHeight
                         }
@@ -192,12 +172,6 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
                         return getLines().size
                     }
 
-                    override fun getStyleAt(client: MinecraftClient, line: Int, width: Double): Style? {
-                        if (line > (count() - 1) || line < 0) return null
-                        val l = getLines()[line]
-                        return client.textRenderer.textHandler.getStyleAt(l.text(), MathHelper.floor(width))
-                    }
-
                     override val maxWidth: Int
                         get() = min(maxWidth, getLines().stream().mapToInt { obj: Line -> obj.width() }.max().orElse(0))
                 }
@@ -205,18 +179,14 @@ class CustomMultilineTextWidget @JvmOverloads constructor(message: Text, private
 
             val EMPTY: MultilineText = object : MultilineText {
 
-                override fun drawWithShadow(context: DrawContext, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int, color: Int) {
+                override fun drawWithShadow(context: DrawContext, textConsumer: DrawnTextConsumer, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int) {
                 }
 
-                override fun draw(context: DrawContext, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int, color: Int): Int {
+                override fun draw(context: DrawContext, textConsumer: DrawnTextConsumer, alignRight: Boolean, width: Int, x: Int, y: Int, lineHeight: Int): Int {
                     return y
                 }
 
                 override fun count(): Int = 0
-
-                override fun getStyleAt(client: MinecraftClient, line: Int, width: Double): Style? {
-                    return null
-                }
 
                 override val maxWidth: Int
                     get() = 0

@@ -13,14 +13,19 @@ package me.fzzyhmstrs.fzzy_config.screen.widget.custom
 import me.fzzyhmstrs.fzzy_config.FC
 import me.fzzyhmstrs.fzzy_config.api.ConfigApi
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.font.DrawnTextConsumer
+import net.minecraft.client.font.DrawnTextConsumer.ClickHandler
 import net.minecraft.client.font.TextRenderer
 import net.minecraft.client.gui.Click
 import net.minecraft.client.gui.DrawContext
+import net.minecraft.client.gui.DrawContext.HoverType
 import net.minecraft.client.gui.widget.AbstractTextWidget
 import net.minecraft.client.input.CharInput
 import net.minecraft.client.input.KeyInput
+import net.minecraft.text.Style
 import net.minecraft.text.Text
 import org.jetbrains.annotations.ApiStatus.Internal
+import java.util.function.Consumer
 
 /**
  * Implementation of [AbstractTextWidget] that also implements [CustomWidget] for better version stability.
@@ -28,15 +33,39 @@ import org.jetbrains.annotations.ApiStatus.Internal
  * @since 0.7.3
  */
 abstract class CustomTextWidget(x: Int, y: Int, width: Int, height: Int, message: Text, textRenderer: TextRenderer =  MinecraftClient.getInstance().textRenderer) : AbstractTextWidget(x, y, width, height, message, textRenderer), CustomWidget {
+    var clickedStyleConsumer: Consumer<Style>? = null
 
-    abstract fun renderText(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float)
+    override fun draw(textConsumer: DrawnTextConsumer?) {
+    }
+
+    abstract fun renderText(context: DrawContext, textConsumer: DrawnTextConsumer, mouseX: Int, mouseY: Int, delta: Float)
 
     final override fun renderWidget(context: DrawContext, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        renderText(context, mouseX, mouseY, deltaTicks)
+        val hoverType = if (this.isHovered) {
+            if (this.clickedStyleConsumer != null) HoverType.TOOLTIP_AND_CURSOR
+            else HoverType.TOOLTIP_ONLY
+        } else HoverType.NONE
+
+        renderText(context, context.getHoverListener(this, hoverType), mouseX, mouseY, deltaTicks)
     }
 
     open fun onPress(event: CustomWidget.MouseEvent): Boolean {
+        if (this.clickedStyleConsumer != null) {
+            val clickHandler = ClickHandler(this.getTextRenderer(), event.x().toInt(), event.y().toInt())
+            this.draw(clickHandler)
+            val style = clickHandler.style
+            if (style != null) {
+                this.clickedStyleConsumer!!.accept(style)
+                return true
+            }
+        }
+
         return false
+    }
+
+    override fun onClick(clickedStyleConsumer: Consumer<Style>?): AbstractTextWidget {
+        this.clickedStyleConsumer = clickedStyleConsumer
+        return this
     }
 
     @Internal

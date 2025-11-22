@@ -224,7 +224,7 @@ object Popups {
         val listWidget = DynamicListWidget(MinecraftClient.getInstance(), list, 0, 0, 10000, 0, DynamicListWidget.ListSpec(leftPadding = 10, rightPadding = 4, listNarrationKey = "fc.narrator.position.list"))
         val popup = PopupWidget.Builder("fc.button.info".translate())
             .addDivider()
-            .add("header", ClickableTextWidget(screen, "fc.button.info.fc".translate("Fzzy Config".lit().styled { style ->
+            .add("header", ClickableTextWidget("fc.button.info.fc".translate("Fzzy Config".lit().styled { style ->
                 style.withFormatting(Formatting.AQUA, Formatting.UNDERLINE)
                     .withClickEvent(ClickEvent.OpenUrl(URI.create("https://moddedmc.wiki/en/project/fzzy-config/docs")))
                     .withHoverEvent(HoverEvent.ShowText("fc.button.info.fc.tip".translate()))

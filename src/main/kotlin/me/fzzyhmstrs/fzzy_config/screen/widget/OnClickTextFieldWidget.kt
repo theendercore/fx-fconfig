@@ -16,6 +16,7 @@ import me.fzzyhmstrs.fzzy_config.simpleId
 import me.fzzyhmstrs.fzzy_config.util.FcText
 import me.fzzyhmstrs.fzzy_config.util.RenderUtil.drawNineSlice
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.font.DrawnTextConsumer
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.tooltip.Tooltip
 import org.lwjgl.glfw.GLFW
@@ -37,7 +38,7 @@ class OnClickTextFieldWidget(private val textSupplier: Supplier<String>, private
 
     private val textures: TextureProvider = TextureSet("widget/text_field".simpleId(), "widget/text_field".simpleId(), "widget/text_field_highlighted".simpleId())
 
-    override fun renderText(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+    override fun renderText(context: DrawContext, textConsumer: DrawnTextConsumer, mouseX: Int, mouseY: Int, delta: Float) {
         context.drawNineSlice(textures.get(this.active, this.isSelected), x, y, width, height, alpha)
         val text = FcText.literal(textSupplier.get())
         val i = getWidth() - 8
@@ -45,7 +46,7 @@ class OnClickTextFieldWidget(private val textSupplier: Supplier<String>, private
         val k = x + 4
         val l = y + (getHeight() - textRenderer.fontHeight + 1) / 2
         val orderedText = if (j > i) FcText.trim(text, i, textRenderer) else text.asOrderedText()
-        context.drawTextWithShadow(textRenderer, orderedText, k, l, textColor)
+        textConsumer.text(k, l, orderedText)
         if (j > i) {
             setTooltip(Tooltip.of(text))
         }
